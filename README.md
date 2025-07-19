@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Thorium 是基于 Chromium 90 二次开发的性能优化版浏览器，相比 Chromium 原版性能提升 8%-38%。本项目提供自动化的 Docker 镜像构建和发布，支持：
+[Thorium](https://github.com/Alex313031/thorium) 是基于 Chromium 90 二次开发的性能优化版浏览器，相比 Chromium 原版性能提升 8%-38%。本项目提供自动化的 Docker 镜像构建和发布，支持：
 
 - 🚀 自动检测 Thorium 新版本
 - 🔄 GitHub Actions 自动化构建
