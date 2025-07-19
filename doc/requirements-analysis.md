@@ -57,6 +57,13 @@
 - **共享内存**: 2GB
 - **安全选项**: seccomp=unconfined, SYS_ADMIN capability
 
+### 系统依赖包
+- **核心依赖**: libgtk-3-0, libnss3, libnspr4, libxcomposite1, libxdamage1
+- **图形依赖**: libdrm2, libgbm1, libxrandr2, libxss1, libxtst6
+- **音频依赖**: libasound2, libatspi2.0-0
+- **安全依赖**: libu2f-udev, libxkbcommon0
+- **字体支持**: fonts-noto-cjk, fonts-noto-color-emoji, fonts-dejavu-core
+
 ## 基准测试指标
 
 ### 性能指标

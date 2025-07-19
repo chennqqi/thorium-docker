@@ -20,16 +20,15 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     libx11-xcb1 \
     libxcb-dri3-0 \
-    libdrm2 \
     libgbm1 \
-    libasound2 \
     libatspi2.0-0 \
     libxshmfence1 \
+    libu2f-udev \
+    libxkbcommon0 \
     fonts-noto-cjk \
     fonts-noto-cjk-extra \
     fonts-noto-color-emoji \
     fonts-dejavu-core \
-    fonts-liberation \
     locales \
     && rm -rf /var/lib/apt/lists/*
 
@@ -75,9 +74,11 @@ RUN if [ ! -f thorium.deb ] || [ ! -s thorium.deb ]; then \
 
 # Install Thorium package
 RUN echo "Installing Thorium..." && \
-    dpkg -i thorium.deb && \
+    dpkg -i thorium.deb  && \
     apt-get update && \
     apt-get install -f -y && \
+    apt-get install -y libu2f-udev && \
+    dpkg --configure -a && \
     rm thorium.deb && \
     rm -rf /var/lib/apt/lists/*
 
