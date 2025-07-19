@@ -92,8 +92,9 @@ RUN case "${INSTRUCTION_SET}" in \
             exit 1; \
         fi; \
     fi && \
-    echo "Download successful, installing..." && \
-    dpkg -i thorium.deb && \
+    echo "Download successful, installing..."  && ls -l
+
+RUN dpkg -i thorium.deb && \
     apt-get update && apt-get install -f -y && \
     rm thorium.deb && \
     rm -rf /var/lib/apt/lists/* && \
