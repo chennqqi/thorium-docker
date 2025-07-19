@@ -30,7 +30,6 @@ jobs:
     outputs:
       latest-version: ${{ steps.get-version.outputs.version }}
       should-build: ${{ steps.check-version.outputs.should-build }}
-      instruction-sets: ${{ steps.get-instruction-sets.outputs.sets }}
     steps:
       - name: Get latest Thorium version
         id: get-version
@@ -43,24 +42,17 @@ jobs:
             echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           fi
       
-      - name: Get instruction sets to build
-        id: get-instruction-sets
-        run: |
-          INPUT_SET="${{ github.event.inputs.instruction_set }}"
-          if [ "$INPUT_SET" = "all" ] || [ -z "$INPUT_SET" ]; then
-            echo 'sets=["AVX2","AVX","SSE3","SSE4"]' >> $GITHUB_OUTPUT
-          else
-            echo "sets=[\"$INPUT_SET\"]" >> $GITHUB_OUTPUT
-          fi
-      
       - name: Check if versions already exist
         id: check-version
         run: |
           VERSION="${{ steps.get-version.outputs.version }}"
-          INSTRUCTION_SETS_JSON="${{ steps.get-instruction-sets.outputs.sets }}"
           
-          # Parse JSON array to get instruction sets
-          INSTRUCTION_SETS=$(echo "$INSTRUCTION_SETS_JSON" | jq -r '.[]')
+          # Define instruction sets to check
+          if [ "${{ github.event.inputs.instruction_set }}" = "all" ] || [ -z "${{ github.event.inputs.instruction_set }}" ]; then
+            INSTRUCTION_SETS="AVX2 AVX SSE3 SSE4"
+          else
+            INSTRUCTION_SETS="${{ github.event.inputs.instruction_set }}"
+          fi
           
           # Check each instruction set
           for SET in $INSTRUCTION_SETS; do
@@ -82,7 +74,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        instruction_set: ${{ fromJson(needs.check-version.outputs.instruction-sets) }}
+        instruction_set: [AVX2, AVX, SSE3, SSE4]
+      fail-fast: false
     permissions:
       contents: read
       packages: write
@@ -110,7 +103,18 @@ jobs:
             type=raw,value=latest-${{ matrix.instruction_set }},enable={{is_default_branch}}
             type=raw,value=${{ matrix.instruction_set }},enable={{is_default_branch}}
 
+      - name: Check if instruction set should be built
+        id: check-instruction-set
+        run: |
+          INPUT_SET="${{ github.event.inputs.instruction_set }}"
+          if [ "$INPUT_SET" = "all" ] || [ -z "$INPUT_SET" ] || [ "$INPUT_SET" = "${{ matrix.instruction_set }}" ]; then
+            echo "should-build=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-build=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and push Docker image
+        if: steps.check-instruction-set.outputs.should-build == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
