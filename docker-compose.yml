@@ -126,10 +126,9 @@ services:
     cap_add:
       - SYS_ADMIN
     command: >
-      thorium
+      wrapped-thorium
       --headless
       --disable-gpu
-      --no-sandbox
       --disable-dev-shm-usage
       --remote-debugging-port=9222
       --disable-web-security

@@ -101,16 +101,22 @@ RUN case "${INSTRUCTION_SET}" in \
 # Create symlink for easier access and verify installation
 RUN echo "Checking thorium installation..." && \
     ls -la /usr/bin/thorium* || echo "No thorium files found yet" && \
+    echo "Checking actual installation path..." && \
+    ls -la /opt/chromium.org/thorium/ || echo "Thorium directory not found yet" && \
     echo "Creating symlink..." && \
-    ln -sf /usr/bin/thorium-browser /usr/bin/thorium && \
-    echo "Checking if thorium-browser exists..." && \
-    if [ -f /usr/bin/thorium-browser ]; then \
-        echo "thorium-browser found, checking version..." && \
+    ln -sf /opt/chromium.org/thorium/thorium-browser /usr/bin/thorium && \
+    echo "Checking if thorium-browser exists in /opt..." && \
+    if [ -f /opt/chromium.org/thorium/thorium-browser ]; then \
+        echo "thorium-browser found in /opt, checking version..." && \
+        /opt/chromium.org/thorium/thorium-browser --version; \
+    elif [ -f /usr/bin/thorium-browser ]; then \
+        echo "thorium-browser found in /usr/bin, checking version..." && \
         /usr/bin/thorium-browser --version; \
     else \
-        echo "Error: thorium-browser not found in /usr/bin/" && \
+        echo "Error: thorium-browser not found in expected locations" && \
         echo "Checking what was installed..." && \
         dpkg -l | grep thorium && \
+        find /opt -name "*thorium*" 2>/dev/null && \
         find /usr -name "*thorium*" 2>/dev/null && \
         exit 1; \
     fi && \
@@ -122,6 +128,28 @@ RUN echo "Checking thorium installation..." && \
         echo "Error: Symlink creation failed" && \
         exit 1; \
     fi
+
+# Create wrapper script for better container compatibility
+RUN echo '#!/bin/bash' > /usr/bin/wrapped-thorium && \
+    echo '' >> /usr/bin/wrapped-thorium && \
+    echo 'BIN=/opt/chromium.org/thorium/thorium-browser' >> /usr/bin/wrapped-thorium && \
+    echo '' >> /usr/bin/wrapped-thorium && \
+    echo '# Cleanup' >> /usr/bin/wrapped-thorium && \
+    echo 'if ! pgrep thorium > /dev/null; then' >> /usr/bin/wrapped-thorium && \
+    echo '  rm -f $HOME/.config/thorium/Singleton*' >> /usr/bin/wrapped-thorium && \
+    echo 'fi' >> /usr/bin/wrapped-thorium && \
+    echo '' >> /usr/bin/wrapped-thorium && \
+    echo '# Run with container-optimized settings' >> /usr/bin/wrapped-thorium && \
+    echo '${BIN} \\' >> /usr/bin/wrapped-thorium && \
+    echo '  --ignore-gpu-blocklist \\' >> /usr/bin/wrapped-thorium && \
+    echo '  --no-first-run \\' >> /usr/bin/wrapped-thorium && \
+    echo '  --no-sandbox \\' >> /usr/bin/wrapped-thorium && \
+    echo '  --password-store=basic \\' >> /usr/bin/wrapped-thorium && \
+    echo '  --simulate-outdated-no-au="Tue, 31 Dec 2099 23:59:59 GMT" \\' >> /usr/bin/wrapped-thorium && \
+    echo '  --test-type \\' >> /usr/bin/wrapped-thorium && \
+    echo '  --user-data-dir \\' >> /usr/bin/wrapped-thorium && \
+    echo '  "$@"' >> /usr/bin/wrapped-thorium && \
+    chmod +x /usr/bin/wrapped-thorium
 
 # Add instruction set info to container
 RUN echo "Thorium ${THORIUM_VERSION} built for ${INSTRUCTION_SET}" > /etc/thorium-info.txt
@@ -142,4 +170,4 @@ USER thorium
 EXPOSE 9222
 
 # Default command for headless mode
-CMD ["/usr/bin/thorium", "--headless", "--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=9222", "--disable-web-security", "--disable-features=VizDisplayCompositor"] 
+CMD ["/usr/bin/wrapped-thorium", "--headless", "--disable-gpu", "--disable-dev-shm-usage", "--remote-debugging-port=9222", "--disable-web-security", "--disable-features=VizDisplayCompositor"] 
