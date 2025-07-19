@@ -46,8 +46,9 @@
 - **性能优化**: `--disable-dev-shm-usage`, `--disable-web-security`
 
 ### 文件命名规则
-- **主要格式**: `thorium_${VERSION}_amd64_${INSTRUCTION_SET}.deb`
-- **备用格式**: `thorium-browser_${VERSION}_${INSTRUCTION_SET}.deb`
+- **主要格式**: `thorium-browser_${VERSION#M}_${INSTRUCTION_SET}.deb`
+- **备用格式**: `thorium_${VERSION}_amd64_${INSTRUCTION_SET}.deb`
+- **版本处理**: 自动移除 M 前缀（如 M130.0.6723.174 → 130.0.6723.174）
 
 ### 容器配置
 - **用户**: thorium (非 root)
