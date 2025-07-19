@@ -57,12 +57,17 @@
 - **共享内存**: 2GB
 - **安全选项**: seccomp=unconfined, SYS_ADMIN capability
 
+### 安装方式
+- **使用 apt install**: 自动处理所有依赖关系
+- **简化依赖管理**: 无需手动安装 libcurl4, libu2f-udev 等
+- **自动依赖解析**: apt 会自动下载和安装缺失的依赖包
+
 ### 系统依赖包
 - **核心依赖**: libgtk-3-0, libnss3, libnspr4, libxcomposite1, libxdamage1
 - **图形依赖**: libdrm2, libgbm1, libxrandr2, libxss1, libxtst6
 - **音频依赖**: libasound2, libatspi2.0-0
-- **安全依赖**: libu2f-udev, libxkbcommon0
 - **字体支持**: fonts-noto-cjk, fonts-noto-color-emoji, fonts-dejavu-core
+- **自动依赖**: libcurl4, libu2f-udev, libxkbcommon0 等由 apt 自动处理
 
 ## 基准测试指标
 

@@ -5,13 +5,9 @@ FROM debian:bullseye-slim AS base
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     fonts-liberation \
-    libappindicator3-1 \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libdrm2 \
     libgtk-3-0 \
-    libnspr4 \
     libnss3 \
+    libnspr4 \
     libxcomposite1 \
     libxdamage1 \
     libxrandr2 \
@@ -21,10 +17,10 @@ RUN apt-get update && apt-get install -y \
     libx11-xcb1 \
     libxcb-dri3-0 \
     libgbm1 \
+    libasound2 \
     libatspi2.0-0 \
     libxshmfence1 \
-    libu2f-udev \
-    libxkbcommon0 \
+    libdrm2 \
     fonts-noto-cjk \
     fonts-noto-cjk-extra \
     fonts-noto-color-emoji \
@@ -74,11 +70,8 @@ RUN if [ ! -f thorium.deb ] || [ ! -s thorium.deb ]; then \
 
 # Install Thorium package
 RUN echo "Installing Thorium..." && \
-    dpkg -i thorium.deb  && \
     apt-get update && \
-    apt-get install -f -y && \
-    apt-get install -y libu2f-udev && \
-    dpkg --configure -a && \
+    apt install -y ./thorium.deb && \
     rm thorium.deb && \
     rm -rf /var/lib/apt/lists/*
 
