@@ -98,7 +98,7 @@ RUN echo "Thorium ${THORIUM_VERSION} built for ${INSTRUCTION_SET}" > /etc/thoriu
 USER thorium
 
 # Verify installation
-RUN thorium --version
+RUN /usr/bin/thorium --version
 
 # Final stage
 FROM thorium-install
@@ -113,4 +113,4 @@ USER thorium
 EXPOSE 9222
 
 # Default command for headless mode
-CMD ["thorium", "--headless", "--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=9222", "--disable-web-security", "--disable-features=VizDisplayCompositor"] 
+CMD ["/usr/bin/thorium", "--headless", "--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=9222", "--disable-web-security", "--disable-features=VizDisplayCompositor"] 
