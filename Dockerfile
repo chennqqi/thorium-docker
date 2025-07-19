@@ -93,41 +93,16 @@ RUN case "${INSTRUCTION_SET}" in \
         fi; \
     fi && \
     echo "Download successful, installing..." && \
-    dpkg -i thorium.deb || true && \
+    dpkg -i thorium.deb && \
     apt-get update && apt-get install -f -y && \
     rm thorium.deb && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    ls -l /opt/chromium.org/thorium/ && \
+    ls -l /usr/bin/thorium-browser
 
 # Create symlink for easier access and verify installation
-RUN echo "Checking thorium installation..." && \
-    ls -la /usr/bin/thorium* || echo "No thorium files found yet" && \
-    echo "Checking actual installation path..." && \
-    ls -la /opt/chromium.org/thorium/ || echo "Thorium directory not found yet" && \
-    echo "Creating symlink..." && \
-    ln -sf /opt/chromium.org/thorium/thorium-browser /usr/bin/thorium && \
-    echo "Checking if thorium-browser exists in /opt..." && \
-    if [ -f /opt/chromium.org/thorium/thorium-browser ]; then \
-        echo "thorium-browser found in /opt, checking version..." && \
-        /opt/chromium.org/thorium/thorium-browser --version; \
-    elif [ -f /usr/bin/thorium-browser ]; then \
-        echo "thorium-browser found in /usr/bin, checking version..." && \
-        /usr/bin/thorium-browser --version; \
-    else \
-        echo "Error: thorium-browser not found in expected locations" && \
-        echo "Checking what was installed..." && \
-        dpkg -l | grep thorium && \
-        find /opt -name "*thorium*" 2>/dev/null && \
-        find /usr -name "*thorium*" 2>/dev/null && \
-        exit 1; \
-    fi && \
-    echo "Verifying thorium symlink..." && \
-    if [ -L /usr/bin/thorium ]; then \
-        echo "Symlink created successfully" && \
-        /usr/bin/thorium --version; \
-    else \
-        echo "Error: Symlink creation failed" && \
-        exit 1; \
-    fi
+RUN     ls -l /opt/chromium.org/thorium/ && \
+ls -l /usr/bin/thorium-browser
 
 # Create wrapper script for better container compatibility
 RUN echo '#!/bin/bash' > /usr/bin/wrapped-thorium && \
