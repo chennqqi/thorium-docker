@@ -62,70 +62,43 @@ ARG INSTRUCTION_SET=AVX2
 ENV THORIUM_VERSION=${THORIUM_VERSION}
 ENV INSTRUCTION_SET=${INSTRUCTION_SET}
 
-# Define download URL based on instruction set
-RUN case "${INSTRUCTION_SET}" in \
-        "AVX2") \
-            THORIUM_DEB_URL="https://github.com/Alex313031/thorium/releases/download/${THORIUM_VERSION}/thorium_${THORIUM_VERSION}_amd64_AVX2.deb" \
-            ;; \
-        "AVX") \
-            THORIUM_DEB_URL="https://github.com/Alex313031/thorium/releases/download/${THORIUM_VERSION}/thorium_${THORIUM_VERSION}_amd64_AVX.deb" \
-            ;; \
-        "SSE3") \
-            THORIUM_DEB_URL="https://github.com/Alex313031/thorium/releases/download/${THORIUM_VERSION}/thorium_${THORIUM_VERSION}_amd64_SSE3.deb" \
-            ;; \
-        "SSE4") \
-            THORIUM_DEB_URL="https://github.com/Alex313031/thorium/releases/download/${THORIUM_VERSION}/thorium_${THORIUM_VERSION}_amd64_SSE4.deb" \
-            ;; \
-        *) \
-            echo "Unsupported instruction set: ${INSTRUCTION_SET}" && exit 1 \
-            ;; \
-    esac && \
-    echo "Downloading Thorium ${THORIUM_VERSION} for ${INSTRUCTION_SET}..." && \
-    echo "URL: ${THORIUM_DEB_URL}" && \
-    wget -q "${THORIUM_DEB_URL}" -O thorium.deb && \
-    if [ ! -f thorium.deb ] || [ ! -s thorium.deb ]; then \
-        echo "Error: Failed to download Thorium package" && \
+# Download Thorium package
+RUN echo "Downloading Thorium ${THORIUM_VERSION} for ${INSTRUCTION_SET}..." && \
+    wget -q "https://github.com/Alex313031/thorium/releases/download/${THORIUM_VERSION}/thorium_${THORIUM_VERSION}_amd64_${INSTRUCTION_SET}.deb" -O thorium.deb
+
+# Try alternative URL if download failed
+RUN if [ ! -f thorium.deb ] || [ ! -s thorium.deb ]; then \
         echo "Trying alternative URL format..." && \
-        wget -q "https://github.com/Alex313031/thorium/releases/download/${THORIUM_VERSION}/thorium-browser_${THORIUM_VERSION}_${INSTRUCTION_SET}.deb" -O thorium.deb && \
-        if [ ! -f thorium.deb ] || [ ! -s thorium.deb ]; then \
-            echo "Error: Failed to download Thorium package with alternative format" && \
-            exit 1; \
-        fi; \
-    fi && \
-    echo "Download successful, installing..."  && ls -l
+        wget -q "https://github.com/Alex313031/thorium/releases/download/${THORIUM_VERSION}/thorium-browser_${THORIUM_VERSION}_${INSTRUCTION_SET}.deb" -O thorium.deb; \
+    fi
 
-RUN dpkg -i thorium.deb && \
-    apt-get update && apt-get install -f -y && \
+# Install Thorium package
+RUN echo "Installing Thorium..." && \
+    dpkg -i thorium.deb && \
+    apt-get update && \
+    apt-get install -f -y && \
     rm thorium.deb && \
-    rm -rf /var/lib/apt/lists/* && \
-    ls -l /opt/chromium.org/thorium/ && \
-    ls -l /usr/bin/thorium-browser
+    rm -rf /var/lib/apt/lists/*
 
-# Create symlink for easier access and verify installation
-RUN     ls -l /opt/chromium.org/thorium/ && \
-ls -l /usr/bin/thorium-browser
+# Verify installation
+RUN echo "Verifying installation..." && \
+    ls -la /opt/chromium.org/thorium/ && \
+    ls -la /usr/bin/thorium-browser
+
+# Create symlink
+RUN ln -sf /opt/chromium.org/thorium/thorium-browser /usr/bin/thorium
+
+# Test version
+RUN /opt/chromium.org/thorium/thorium-browser --version
 
 # Create wrapper script for better container compatibility
-RUN echo '#!/bin/bash' > /usr/bin/wrapped-thorium && \
-    echo '' >> /usr/bin/wrapped-thorium && \
-    echo 'BIN=/opt/chromium.org/thorium/thorium-browser' >> /usr/bin/wrapped-thorium && \
-    echo '' >> /usr/bin/wrapped-thorium && \
-    echo '# Cleanup' >> /usr/bin/wrapped-thorium && \
-    echo 'if ! pgrep thorium > /dev/null; then' >> /usr/bin/wrapped-thorium && \
-    echo '  rm -f $HOME/.config/thorium/Singleton*' >> /usr/bin/wrapped-thorium && \
-    echo 'fi' >> /usr/bin/wrapped-thorium && \
-    echo '' >> /usr/bin/wrapped-thorium && \
-    echo '# Run with container-optimized settings' >> /usr/bin/wrapped-thorium && \
-    echo '${BIN} \\' >> /usr/bin/wrapped-thorium && \
-    echo '  --ignore-gpu-blocklist \\' >> /usr/bin/wrapped-thorium && \
-    echo '  --no-first-run \\' >> /usr/bin/wrapped-thorium && \
-    echo '  --no-sandbox \\' >> /usr/bin/wrapped-thorium && \
-    echo '  --password-store=basic \\' >> /usr/bin/wrapped-thorium && \
-    echo '  --simulate-outdated-no-au="Tue, 31 Dec 2099 23:59:59 GMT" \\' >> /usr/bin/wrapped-thorium && \
-    echo '  --test-type \\' >> /usr/bin/wrapped-thorium && \
-    echo '  --user-data-dir \\' >> /usr/bin/wrapped-thorium && \
-    echo '  "$@"' >> /usr/bin/wrapped-thorium && \
-    chmod +x /usr/bin/wrapped-thorium
+RUN echo '#!/bin/bash' > /usr/bin/wrapped-thorium
+RUN echo 'BIN=/opt/chromium.org/thorium/thorium-browser' >> /usr/bin/wrapped-thorium
+RUN echo 'if ! pgrep thorium > /dev/null; then' >> /usr/bin/wrapped-thorium
+RUN echo '  rm -f $HOME/.config/thorium/Singleton*' >> /usr/bin/wrapped-thorium
+RUN echo 'fi' >> /usr/bin/wrapped-thorium
+RUN echo '${BIN} --ignore-gpu-blocklist --no-first-run --no-sandbox --password-store=basic --simulate-outdated-no-au="Tue, 31 Dec 2099 23:59:59 GMT" --test-type --user-data-dir "$@"' >> /usr/bin/wrapped-thorium
+RUN chmod +x /usr/bin/wrapped-thorium
 
 # Add instruction set info to container
 RUN echo "Thorium ${THORIUM_VERSION} built for ${INSTRUCTION_SET}" > /etc/thorium-info.txt
