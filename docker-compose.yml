@@ -1,0 +1,154 @@
+version: '3.8'
+
+services:
+  thorium-headless-avx2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        THORIUM_VERSION: M130.0.6723.174
+        INSTRUCTION_SET: AVX2
+    container_name: thorium-headless-avx2
+    ports:
+      - "9222:9222"  # Remote debugging port
+    volumes:
+      - thorium_config_avx2:/config
+    environment:
+      - DISPLAY=:99
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9222/json/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  thorium-headless-avx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        THORIUM_VERSION: M130.0.6723.174
+        INSTRUCTION_SET: AVX
+    container_name: thorium-headless-avx
+    ports:
+      - "9223:9222"  # Remote debugging port
+    volumes:
+      - thorium_config_avx:/config
+    environment:
+      - DISPLAY=:99
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9222/json/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  thorium-headless-sse3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        THORIUM_VERSION: M130.0.6723.174
+        INSTRUCTION_SET: SSE3
+    container_name: thorium-headless-sse3
+    ports:
+      - "9224:9222"  # Remote debugging port
+    volumes:
+      - thorium_config_sse3:/config
+    environment:
+      - DISPLAY=:99
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9222/json/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  thorium-headless-sse4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        THORIUM_VERSION: M130.0.6723.174
+        INSTRUCTION_SET: SSE4
+    container_name: thorium-headless-sse4
+    ports:
+      - "9225:9222"  # Remote debugging port
+    volumes:
+      - thorium_config_sse4:/config
+    environment:
+      - DISPLAY=:99
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9222/json/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Test service with AVX2 (default)
+  thorium-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        THORIUM_VERSION: M130.0.6723.174
+        INSTRUCTION_SET: AVX2
+    container_name: thorium-test
+    ports:
+      - "9226:9222"
+    volumes:
+      - thorium_config_test:/config
+      - ./test:/test
+    environment:
+      - DISPLAY=:99
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+    command: >
+      thorium
+      --headless
+      --disable-gpu
+      --no-sandbox
+      --disable-dev-shm-usage
+      --remote-debugging-port=9222
+      --disable-web-security
+      --disable-features=VizDisplayCompositor
+      --user-data-dir=/config
+      --disable-background-timer-throttling
+      --disable-backgrounding-occluded-windows
+      --disable-renderer-backgrounding
+      --disable-features=TranslateUI
+      --disable-ipc-flooding-protection
+
+volumes:
+  thorium_config_avx2:
+    driver: local
+  thorium_config_avx:
+    driver: local
+  thorium_config_sse3:
+    driver: local
+  thorium_config_sse4:
+    driver: local
+  thorium_config_test:
+    driver: local 

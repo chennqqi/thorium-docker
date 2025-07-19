@@ -1,0 +1,228 @@
+name: Performance Benchmark
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'benchmark/**'
+      - 'Dockerfile'
+      - '.github/workflows/benchmark.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'benchmark/**'
+      - 'Dockerfile'
+      - '.github/workflows/benchmark.yml'
+  schedule:
+    # Run benchmark weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Thorium version to benchmark'
+        required: false
+        default: ''
+      iterations:
+        description: 'Number of benchmark iterations'
+        required: false
+        default: '3'
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Get Thorium version
+        id: get-version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            LATEST_VERSION=$(curl -s https://api.github.com/repos/Alex313031/thorium/releases/latest | jq -r '.tag_name')
+            echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Thorium images
+        run: |
+          docker build --build-arg THORIUM_VERSION=${{ steps.get-version.outputs.version }} --build-arg INSTRUCTION_SET=AVX2 -t thorium-docker:avx2 .
+          docker build --build-arg THORIUM_VERSION=${{ steps.get-version.outputs.version }} --build-arg INSTRUCTION_SET=AVX -t thorium-docker:avx .
+          docker build --build-arg THORIUM_VERSION=${{ steps.get-version.outputs.version }} --build-arg INSTRUCTION_SET=SSE3 -t thorium-docker:sse3 .
+          docker build --build-arg THORIUM_VERSION=${{ steps.get-version.outputs.version }} --build-arg INSTRUCTION_SET=SSE4 -t thorium-docker:sse4 .
+
+      - name: Save images
+        run: |
+          docker save thorium-docker:avx2 -o thorium-avx2.tar
+          docker save thorium-docker:avx -o thorium-avx.tar
+          docker save thorium-docker:sse3 -o thorium-sse3.tar
+          docker save thorium-docker:sse4 -o thorium-sse4.tar
+
+      - name: Upload Docker images
+        uses: actions/upload-artifact@v4
+        with:
+          name: thorium-images
+          path: thorium-*.tar
+          retention-days: 1
+
+  run-benchmark:
+    needs: build-images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: "Quick Benchmark"
+            iterations: 1
+            urls: "https://www.google.com"
+          - name: "Standard Benchmark"
+            iterations: 3
+            urls: "https://www.google.com https://www.github.com"
+          - name: "Full Benchmark"
+            iterations: 5
+            urls: "https://www.google.com https://www.github.com https://www.stackoverflow.com https://www.wikipedia.org"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Docker images
+        uses: actions/download-artifact@v4
+        with:
+          name: thorium-images
+
+      - name: Load Docker images
+        run: |
+          docker load -i thorium-avx2.tar
+          docker load -i thorium-avx.tar
+          docker load -i thorium-sse3.tar
+          docker load -i thorium-sse4.tar
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          cd benchmark
+          pip install -r requirements.txt
+
+      - name: Run benchmark
+        run: |
+          cd benchmark
+          python3 benchmark.py \
+            --iterations ${{ matrix.iterations }} \
+            --urls ${{ matrix.urls }} \
+            --output results/benchmark_${{ matrix.name }}.json \
+            --report results/benchmark_${{ matrix.name }}.md
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ matrix.name }}
+          path: benchmark/results/
+          retention-days: 30
+
+      - name: Generate benchmark summary
+        run: |
+          cd benchmark
+          if [ -f "results/benchmark_${{ matrix.name }}.json" ]; then
+            echo "=== BENCHMARK SUMMARY: ${{ matrix.name }}) ==="
+            python3 -c "import json; data=json.load(open('results/benchmark_${{ matrix.name }}.json')); [print(f'{r[\"image\"]}: Startup={r[\"startup\"][\"total_startup_time\"]:.2f}s') if r['success'] else print(f'{r[\"image\"]}: FAILED') for r in data['results']]"
+          fi
+
+  benchmark-report:
+    needs: run-benchmark
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download all benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-results-*
+          merge-multiple: true
+
+      - name: Generate comprehensive report
+        run: |
+          echo "# Performance Benchmark Report" > benchmark-report.md
+          echo "" >> benchmark-report.md
+          echo "Generated: $(date -u)" >> benchmark-report.md
+          echo "Repository: ${{ github.repository }}" >> benchmark-report.md
+          echo "Commit: ${{ github.sha }}" >> benchmark-report.md
+          echo "" >> benchmark-report.md
+          
+          for file in results/benchmark_*.json; do
+            if [ -f "$file" ]; then
+              echo "## $(basename "$file" .json | sed 's/benchmark_//')" >> benchmark-report.md
+              echo "" >> benchmark-report.md
+              echo "| Container | Startup Time (s) | Success |" >> benchmark-report.md
+              echo "|-----------|------------------|---------|" >> benchmark-report.md
+              python3 -c "import json; data=json.load(open('$file')); [print(f'| {r[\"image\"]} | {r[\"startup\"][\"total_startup_time\"]:.2f} | ✅ |') if r['success'] else print(f'| {r[\"image\"]} | FAILED | ❌ |') for r in data['results']]" >> benchmark-report.md
+              echo "" >> benchmark-report.md
+            fi
+          done
+
+      - name: Upload comprehensive report
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-comprehensive-report
+          path: benchmark-report.md
+          retention-days: 90
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report = '';
+            try {
+              report = fs.readFileSync('benchmark-report.md', 'utf8');
+            } catch (error) {
+              report = 'Benchmark report generation failed.';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Performance Benchmark Results\n\n${report}`
+            });
+
+  benchmark-notification:
+    needs: [run-benchmark, benchmark-report]
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'schedule'
+    steps:
+      - name: Download benchmark report
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-comprehensive-report
+
+      - name: Create benchmark issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report = '';
+            try {
+              report = fs.readFileSync('benchmark-report.md', 'utf8');
+            } catch (error) {
+              report = 'Benchmark report generation failed.';
+            }
+            
+            const date = new Date().toISOString().split('T')[0];
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Weekly Performance Benchmark Report - ${date}`,
+              body: `## Weekly Performance Benchmark Results\n\n${report}\n\nThis is an automated weekly benchmark report.`,
+              labels: ['benchmark', 'performance', 'automated']
+            }); 

@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+LICENSE
+doc/
+
+# Development files
+test/
+scripts/
+requirements.txt
+Makefile
+docker-compose.yml
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp 

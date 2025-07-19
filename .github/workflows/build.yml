@@ -1,0 +1,153 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run daily at 2 AM UTC to check for new versions
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Thorium version to build (e.g., M130.0.6723.174)'
+        required: false
+        default: ''
+      instruction_set:
+        description: 'Instruction set to build (AVX2, AVX, SSE3, SSE4, or all)'
+        required: false
+        default: 'all'
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      latest-version: ${{ steps.get-version.outputs.version }}
+      should-build: ${{ steps.check-version.outputs.should-build }}
+      instruction-sets: ${{ steps.get-instruction-sets.outputs.sets }}
+    steps:
+      - name: Get latest Thorium version
+        id: get-version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            # Get latest version from GitHub releases
+            LATEST_VERSION=$(curl -s https://api.github.com/repos/Alex313031/thorium/releases/latest | jq -r '.tag_name')
+            echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Get instruction sets to build
+        id: get-instruction-sets
+        run: |
+          INPUT_SET="${{ github.event.inputs.instruction_set }}"
+          if [ "$INPUT_SET" = "all" ] || [ -z "$INPUT_SET" ]; then
+            echo "sets=AVX2,AVX,SSE3,SSE4" >> $GITHUB_OUTPUT
+          else
+            echo "sets=$INPUT_SET" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Check if versions already exist
+        id: check-version
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          INSTRUCTION_SETS="${{ steps.get-instruction-sets.outputs.sets }}"
+          
+          # Check each instruction set
+          for SET in ${INSTRUCTION_SETS//,/ }; do
+            if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-${SET} >/dev/null 2>&1; then
+              echo "Version ${VERSION}-${SET} already exists in registry"
+            else
+              echo "Version ${VERSION}-${SET} not found, will build"
+              echo "should-build=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          done
+          
+          # If we get here, all versions exist
+          echo "should-build=false" >> $GITHUB_OUTPUT
+
+  build:
+    needs: check-version
+    if: needs.check-version.outputs.should-build == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        instruction_set: ${{ fromJson(format('[{0}]', needs.check-version.outputs.instruction-sets)) }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ needs.check-version.outputs.latest-version }}-${{ matrix.instruction_set }}
+            type=raw,value=latest-${{ matrix.instruction_set }},enable={{is_default_branch}}
+            type=raw,value=${{ matrix.instruction_set }},enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            THORIUM_VERSION=${{ needs.check-version.outputs.latest-version }}
+            INSTRUCTION_SET=${{ matrix.instruction_set }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  create-release:
+    needs: [check-version, build]
+    if: needs.check-version.outputs.should-build == 'true' && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.check-version.outputs.latest-version }}
+          release_name: Thorium ${{ needs.check-version.outputs.latest-version }}
+          body: |
+            Automated release for Thorium version ${{ needs.check-version.outputs.latest-version }}
+            
+            Available Docker images:
+            - `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-version.outputs.latest-version }}-AVX2` (High Performance)
+            - `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-version.outputs.latest-version }}-AVX` (Medium Performance)
+            - `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-version.outputs.latest-version }}-SSE3` (Basic Performance)
+            - `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-version.outputs.latest-version }}-SSE4` (Compatibility)
+            
+            Features:
+            - Headless browser optimized for web scraping
+            - Multi-language support with CJK fonts
+            - Security hardened configuration
+            - Performance optimized for containerized environments
+            - Multiple instruction set support (AVX2, AVX, SSE3, SSE4)
+          draft: false
+          prerelease: false 
