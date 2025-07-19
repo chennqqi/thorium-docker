@@ -64,6 +64,7 @@ ENV INSTRUCTION_SET=${INSTRUCTION_SET}
 
 # Download Thorium package
 RUN echo "Downloading Thorium ${THORIUM_VERSION} for ${INSTRUCTION_SET}..." && \
+    echo "download URL: https://github.com/Alex313031/thorium/releases/download/${THORIUM_VERSION}/thorium_${THORIUM_VERSION}_amd64_${INSTRUCTION_SET}.deb" && \
     wget -q "https://github.com/Alex313031/thorium/releases/download/${THORIUM_VERSION}/thorium_${THORIUM_VERSION}_amd64_${INSTRUCTION_SET}.deb" -O thorium.deb
 
 # Try alternative URL if download failed
