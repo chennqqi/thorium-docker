@@ -15,10 +15,10 @@
 | 容器 | 描述 | 端口 |
 |------|------|------|
 | `chromedp/headless-shell:latest` | 参考容器 | 9222 |
-| `thorium-docker:avx2` | Thorium AVX2 版本 | 9223 |
-| `thorium-docker:avx` | Thorium AVX 版本 | 9224 |
-| `thorium-docker:sse3` | Thorium SSE3 版本 | 9225 |
-| `thorium-docker:sse4` | Thorium SSE4 版本 | 9226 |
+| `thorium-headless:avx2` | Thorium AVX2 版本 | 9223 |
+| `thorium-headless:avx` | Thorium AVX 版本 | 9224 |
+| `thorium-headless:sse3` | Thorium SSE3 版本 | 9225 |
+| `thorium-headless:sse4` | Thorium SSE4 版本 | 9226 |
 
 ## 测试指标
 

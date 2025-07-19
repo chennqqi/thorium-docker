@@ -22,7 +22,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/thorium-docker
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/thorium-headless
 
 jobs:
   check-version:

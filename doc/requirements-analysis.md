@@ -56,7 +56,7 @@
 - **调试端口**: 9222
 - **共享内存**: 2GB
 - **安全选项**: seccomp=unconfined, SYS_ADMIN capability
-- **镜像名称**: 使用 `${{ secrets.DOCKER_USERNAME }}/thorium-docker` 格式
+- **镜像名称**: 使用 `${{ secrets.DOCKER_USERNAME }}/thorium-headless` 格式
 
 ### 安装方式
 - **使用 apt install**: 自动处理所有依赖关系

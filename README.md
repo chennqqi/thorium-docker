@@ -63,13 +63,13 @@ curl http://localhost:9225/json/version  # SSE4
 
 ```bash
 # 拉取 AVX2 版本（推荐）
-docker pull chennqqi/thorium-docker:latest
+docker pull sort/thorium-headless:latest
 
 # 拉取特定指令集版本
-docker pull chennqqi/thorium-docker:avx2
-docker pull chennqqi/thorium-docker:avx
-docker pull chennqqi/thorium-docker:sse3
-docker pull chennqqi/thorium-docker:sse4
+docker pull sort/thorium-headless:AVX2
+docker pull sort/thorium-headless:AVX
+docker pull sort/thorium-headless:SSE3
+docker pull sort/thorium-headless:SSE4
 
 # 运行 AVX2 容器
 docker run -d \
@@ -77,7 +77,7 @@ docker run -d \
   -p 9222:9222 \
   --security-opt seccomp=unconfined \
   --cap-add SYS_ADMIN \
-  chennqqi/thorium-docker:avx2
+  sort/thorium-headless:AVX2
 
 # 运行 AVX 容器
 docker run -d \
@@ -85,7 +85,7 @@ docker run -d \
   -p 9223:9222 \
   --security-opt seccomp=unconfined \
   --cap-add SYS_ADMIN \
-  chennqqi/thorium-docker:avx
+  sort/thorium-headless:AVX
 ```
 
 ### 使用 Selenium
@@ -176,10 +176,10 @@ make benchmark-summary
 | 容器 | 描述 | 端口 |
 |------|------|------|
 | `chromedp/headless-shell:latest` | 参考容器 | 9222 |
-| `thorium-docker:avx2` | Thorium AVX2 版本 | 9223 |
-| `thorium-docker:avx` | Thorium AVX 版本 | 9224 |
-| `thorium-docker:sse3` | Thorium SSE3 版本 | 9225 |
-| `thorium-docker:sse4` | Thorium SSE4 版本 | 9226 |
+| `thorium-headless:avx2` | Thorium AVX2 版本 | 9223 |
+| `thorium-headless:avx` | Thorium AVX 版本 | 9224 |
+| `thorium-headless:sse3` | Thorium SSE3 版本 | 9225 |
+| `thorium-headless:sse4` | Thorium SSE4 版本 | 9226 |
 
 ### 测试指标
 
@@ -312,7 +312,7 @@ Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Architectur
    grep -o 'avx2\|avx\|sse3\|sse4' /proc/cpuinfo
    
    # 尝试使用兼容性更好的版本
-   docker run chennqqi/thorium-docker:sse4
+   docker run sort/thorium-headless:sse4
    ```
 
 3. **远程调试连接失败**
