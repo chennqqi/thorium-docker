@@ -78,13 +78,13 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: "Quick Benchmark"
+          - name: "Quick_Benchmark"
             iterations: 1
             urls: "https://www.google.com"
-          - name: "Standard Benchmark"
+          - name: "Standard_Benchmark"
             iterations: 3
             urls: "https://www.google.com https://www.github.com"
-          - name: "Full Benchmark"
+          - name: "Full_Benchmark"
             iterations: 5
             urls: "https://www.google.com https://www.github.com https://www.stackoverflow.com https://www.wikipedia.org"
     steps:
@@ -119,8 +119,8 @@ jobs:
           python3 benchmark.py \
             --iterations ${{ matrix.iterations }} \
             --urls ${{ matrix.urls }} \
-            --output results/benchmark_${{ matrix.name }}.json \
-            --report results/benchmark_${{ matrix.name }}.md
+            --output "results/benchmark_${{ matrix.name }}.json" \
+            --report "results/benchmark_${{ matrix.name }}.md"
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
