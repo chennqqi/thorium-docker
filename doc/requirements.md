@@ -42,6 +42,7 @@ thorium-docker 项目: thorium for docker
 - 包含启动时间、内存使用、页面加载速度等指标
 - 生成详细的性能报告
 - 支持自动化性能测试
+- 修复基准测试脚本中的目录创建问题，确保 results 目录存在
 
 ## 技术要求
 - 使用GitHub Actions进行CI/CD

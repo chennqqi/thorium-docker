@@ -394,6 +394,9 @@ class BenchmarkRunner:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"benchmark_results_{timestamp}.json"
         
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(filename) if os.path.dirname(filename) else '.', exist_ok=True)
+        
         with open(filename, 'w') as f:
             json.dump(benchmark_results, f, indent=2)
         
@@ -438,6 +441,9 @@ def main():
     # Generate and save report
     report = runner.generate_report(results)
     if args.report:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(args.report) if os.path.dirname(args.report) else '.', exist_ok=True)
+        
         with open(args.report, 'w') as f:
             f.write(report)
         print(f"Report saved to: {args.report}")
